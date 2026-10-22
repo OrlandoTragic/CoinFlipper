@@ -2,17 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Coin Flipper - James vs Keira</title>
+  
+  <!-- Canvas Confetti Library for wins -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
   <style>
+    /* Design Tokens & Universal Reset */
     :root {
-      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-      --glass: rgba(255, 255, 255, 0.08);
-      --glass-border: rgba(255, 255, 255, 0.15);
-      --james-yellow: #f59e0b;
+      --bg-slate: #0f172a;
+      --bg-gradient: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 75%);
+      --glass-bg: rgba(30, 41, 59, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --james-gold: #f59e0b;
+      --james-accent: #fef08a;
       --keira-pink: #ec4899;
-      --text-light: #f8fafc;
+      --keira-purple: #c084fc;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
     }
 
     * {
@@ -24,76 +35,100 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
-      background: var(--bg-gradient);
-      color: var(--text-light);
-      min-height: 100vh;
-      min-height: -webkit-fill-available;
+    /* Edge-to-Edge Safari Safe Area Canvas Setup */
+    html, body {
+      background-color: var(--bg-slate);
+      background-image: var(--bg-gradient);
+      color: var(--text-main);
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    }
+
+    /* Safe Area Padding Shell */
+    .app-viewport {
       display: flex;
       flex-direction: column;
-      overflow-x: hidden;
+      height: 100%;
+      width: 100%;
+      padding-top: max(env(safe-area-inset-top), 16px);
+      padding-bottom: max(env(safe-area-inset-bottom), 16px);
+      padding-left: max(env(safe-area-inset-left), 20px);
+      padding-right: max(env(safe-area-inset-right), 20px);
+      justify-content: space-between;
     }
 
-    /* Layout - Default Single Screen */
-    .app-container {
-      display: grid;
-      grid-template-rows: auto auto 1fr;
-      height: 100vh;
-      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-      gap: 16px;
-      overflow-y: auto;
-    }
-
-    /* iPhone Duo Spanning & Foldable Posture Support */
-    @media (screen-spanning: single-fold-vertical), (min-width: 700px) and (orientation: landscape) {
-      .app-container {
-        grid-template-rows: auto 1fr;
+    /* Dual Screen & Spanning Adaptation for Duo Devices */
+    @media (screen-spanning: single-fold-vertical), (min-width: 768px) and (orientation: landscape) {
+      .app-viewport {
+        display: grid;
         grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto 1fr;
         gap: 24px;
-        overflow: hidden;
+        align-items: center;
       }
-
       .header-area {
         grid-column: span 2;
       }
-
       .stage-panel {
         border-right: 1px solid var(--glass-border);
-        padding-right: 16px;
+        padding-right: 20px;
+        height: 100%;
       }
     }
 
-    header {
+    /* App Header */
+    .header-area {
       text-align: center;
+      padding-top: 8px;
     }
 
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+    .app-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    /* Stage Panel */
+    .app-subtitle {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Central 3D Stage Section */
     .stage-panel {
+      flex: 1 1 auto;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       position: relative;
-      perspective: 1000px;
-      gap: 20px;
+      perspective: 1200px;
+      margin: 12px 0;
     }
 
-    /* 3D Coin */
+    /* Coin Glow & Interactive Target */
     .coin-wrapper {
-      width: 200px;
-      height: 200px;
+      width: min(62vw, 240px);
+      height: min(62vw, 240px);
+      max-width: 250px;
+      max-height: 250px;
       position: relative;
       transform-style: preserve-3d;
       cursor: pointer;
+      border-radius: 50%;
+      transition: transform 0.15s ease-out;
+    }
+
+    .coin-wrapper:active {
+      transform: scale(0.96);
     }
 
     .coin {
@@ -102,7 +137,7 @@
       position: absolute;
       transform-style: preserve-3d;
       border-radius: 50%;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.3);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), 0 0 30px rgba(255, 255, 255, 0.05);
     }
 
     .coin-face {
@@ -116,50 +151,91 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      border: 6px solid rgba(255,255,255,0.4);
+      border: 8px solid rgba(255, 255, 255, 0.35);
+      box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.3);
     }
 
+    /* James Side Styling */
     .face-james {
-      background: radial-gradient(circle at 30% 30%, #fef08a, #d97706);
-      color: #78350f;
+      background: radial-gradient(circle at 35% 35%, #fde047 0%, #ca8a04 60%, #854d0e 100%);
+      color: #422006;
+      transform: rotateY(0deg);
     }
 
+    .face-james::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+    }
+
+    /* Keira Side Styling */
     .face-keira {
-      background: radial-gradient(circle at 30% 30%, #fbcfe8, #c084fc);
-      color: #581c87;
+      background: radial-gradient(circle at 35% 35%, #f472b6 0%, #c084fc 60%, #6366f1 100%);
+      color: #ffffff;
       transform: rotateY(180deg);
     }
 
-    .coin-title {
-      font-size: 1.8rem;
-      font-weight: 800;
+    .face-keira::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+    }
+
+    .coin-name {
+      font-size: clamp(1.4rem, 5vw, 2rem);
+      font-weight: 900;
       margin-top: 6px;
       text-transform: uppercase;
+      letter-spacing: 1.5px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
 
-    .icon-svg {
-      width: 65px;
-      height: 65px;
-      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+    .coin-icon {
+      width: 48%;
+      height: 48%;
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3));
     }
 
-    /* Controls & Dashboard */
+    /* Dynamic Outcome Banner */
+    .status-banner {
+      margin-top: 16px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    /* Dashboard & Glass Cards Panel */
     .dashboard-panel {
       display: flex;
       flex-direction: column;
       gap: 12px;
-      justify-content: center;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
     }
 
     .glass-card {
-      background: var(--glass);
+      background: var(--glass-bg);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--glass-border);
-      border-radius: 18px;
-      padding: 14px;
+      border-radius: 20px;
+      padding: 14px 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
 
+    /* Stats Grid */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -167,59 +243,84 @@
       text-align: center;
     }
 
-    .stat-val {
-      font-size: 1.3rem;
-      font-weight: 700;
+    .stat-number {
+      font-size: 1.35rem;
+      font-weight: 800;
     }
 
     .stat-label {
       font-size: 0.65rem;
+      font-weight: 700;
       text-transform: uppercase;
-      opacity: 0.7;
+      color: var(--text-muted);
       margin-top: 2px;
+      letter-spacing: 0.5px;
     }
 
-    /* Win Percentage Bar */
-    .ratio-bar-container {
+    /* Win Percentage Distribution Bar */
+    .ratio-bar-wrapper {
       height: 8px;
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 4px;
       overflow: hidden;
       display: flex;
-      margin-top: 8px;
+      margin-top: 10px;
     }
 
-    .ratio-james {
-      background: var(--james-yellow);
+    .bar-james {
+      background: linear-gradient(90deg, #facc15, #f59e0b);
       width: 50%;
-      transition: width 0.3s ease;
+      transition: width 0.4s ease;
     }
 
-    .ratio-keira {
-      background: var(--keira-pink);
+    .bar-keira {
+      background: linear-gradient(90deg, #f472b6, #c084fc);
       width: 50%;
-      transition: width 0.3s ease;
+      transition: width 0.4s ease;
     }
 
-    /* History Chips */
-    .history-container {
+    /* History Chips Scroll Area */
+    .history-card {
       display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding-bottom: 4px;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .history-chip {
-      padding: 4px 10px;
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .history-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      padding: 4px 12px;
       border-radius: 12px;
       font-size: 0.75rem;
-      font-weight: 700;
+      font-weight: 800;
       white-space: nowrap;
+      animation: chipPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes chipPop {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
 
     .chip-james {
       background: rgba(245, 158, 11, 0.2);
-      color: var(--james-yellow);
+      color: var(--james-gold);
       border: 1px solid rgba(245, 158, 11, 0.4);
     }
 
@@ -229,176 +330,241 @@
       border: 1px solid rgba(236, 72, 153, 0.4);
     }
 
-    /* Action Buttons */
-    .controls-row {
+    /* Action Buttons Row */
+    .action-row {
       display: grid;
       grid-template-columns: 1fr auto;
-      gap: 10px;
+      gap: 12px;
     }
 
-    .flip-btn {
+    .btn-flip {
       padding: 16px;
-      border-radius: 16px;
+      border-radius: 18px;
       border: none;
-      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-      color: #fff;
-      font-size: 1.1rem;
-      font-weight: 700;
-      box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+      color: #ffffff;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      box-shadow: 0 12px 25px -5px rgba(99, 102, 241, 0.5);
       cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
     }
 
-    .flip-btn:active {
-      transform: scale(0.98);
+    .btn-flip:active {
+      transform: scale(0.97);
     }
 
-    .icon-btn {
-      width: 52px;
-      height: 52px;
-      border-radius: 16px;
+    .btn-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
       border: 1px solid var(--glass-border);
-      background: var(--glass);
-      color: #fff;
+      background: var(--glass-bg);
+      color: var(--text-main);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 1.2rem;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: transform 0.1s ease;
+    }
+
+    .btn-icon:active {
+      transform: scale(0.92);
     }
   </style>
 </head>
 <body>
 
-  <div class="app-container">
+  <div class="app-viewport">
+    
+    <!-- Top Bar Title -->
     <div class="header-area">
-      <header>
-        <h1>James vs Keira</h1>
-      </header>
+      <div class="app-title">Flip Decider</div>
+      <div class="app-subtitle">James or Keira</div>
     </div>
 
-    <!-- Stage Panel -->
+    <!-- Center 3D Stage Section -->
     <div class="stage-panel">
       <div class="coin-wrapper" onclick="flipCoin()">
         <div class="coin" id="coin">
+          
+          <!-- Side A: James -->
           <div class="coin-face face-james">
-            <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            <svg class="coin-icon" viewBox="0 0 24 24" fill="#fef08a" stroke="#854d0e" stroke-width="1.5">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
             </svg>
-            <div class="coin-title">James</div>
+            <div class="coin-name">JAMES</div>
           </div>
+
+          <!-- Side B: Keira -->
           <div class="coin-face face-keira">
-            <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20 12c0-3.87-3.13-7-7-7s-7 3.13-7 7c0 2.38 1.19 4.47 3 5.74V21l4-2 4 2v-3.26c1.81-1.27 3-3.36 3-5.74z"/>
+            <svg class="coin-icon" viewBox="0 0 100 100" fill="none">
+              <path d="M52 25 L68 5 L58 30 Z" fill="#fde047" stroke="#eab308" stroke-width="2" />
+              <path d="M35 30 Q28 15 42 28 Z" fill="#f472b6" stroke="#fff" stroke-width="1.5"/>
+              <path d="M48 32 Q45 18 54 30 Z" fill="#f472b6" stroke="#fff" stroke-width="1.5"/>
+              <path d="M30 45 C30 28 60 28 65 42 C70 52 65 65 50 68 C40 70 30 60 30 45 Z" fill="#ffffff"/>
+              <path d="M30 35 Q20 40 25 50 Q18 58 28 65" stroke="#ec4899" stroke-width="5" stroke-linecap="round"/>
+              <path d="M26 38 Q16 43 21 53 Q14 61 24 68" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+              <path d="M22 41 Q12 46 17 56" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="52" cy="45" r="3" fill="#1e1b4b"/>
+              <circle cx="58" cy="52" r="4" fill="#f472b6" opacity="0.6"/>
             </svg>
-            <div class="coin-title">Keira</div>
+            <div class="coin-name">KEIRA</div>
           </div>
+
         </div>
+      </div>
+
+      <!-- Live Result Banner -->
+      <div id="statusBanner" class="status-banner" style="color: var(--text-muted);">
+        Tap Coin or Button to Flip
       </div>
     </div>
 
-    <!-- Dashboard Panel -->
+    <!-- Lower Dashboard Panel -->
     <div class="dashboard-panel">
-      <!-- Stats Summary -->
+      
+      <!-- Stats Summary Card -->
       <div class="glass-card">
         <div class="stats-grid">
           <div>
-            <div class="stat-val" id="totalFlips">0</div>
+            <div class="stat-number" id="totalFlips">0</div>
             <div class="stat-label">Total</div>
           </div>
           <div>
-            <div class="stat-val" id="jamesCount" style="color: var(--james-yellow);">0</div>
+            <div class="stat-number" id="jamesCount" style="color: var(--james-gold);">0</div>
             <div class="stat-label">James</div>
           </div>
           <div>
-            <div class="stat-val" id="keiraCount" style="color: var(--keira-pink);">0</div>
+            <div class="stat-number" id="keiraCount" style="color: var(--keira-pink);">0</div>
             <div class="stat-label">Keira</div>
           </div>
           <div>
-            <div class="stat-val" id="streakCount">0</div>
+            <div class="stat-number" id="streakCount">0</div>
             <div class="stat-label">Streak</div>
           </div>
         </div>
 
-        <div class="ratio-bar-container">
-          <div class="ratio-james" id="ratioJames"></div>
-          <div class="ratio-keira" id="ratioKeira"></div>
+        <div class="ratio-bar-wrapper">
+          <div class="bar-james" id="barJames"></div>
+          <div class="bar-keira" id="barKeira"></div>
         </div>
       </div>
 
-      <!-- History Log -->
-      <div class="glass-card">
-        <div class="stat-label" style="margin-bottom: 6px;">Recent Flips</div>
-        <div class="history-container" id="historyLog">
-          <span style="font-size: 0.75rem; opacity: 0.5;">Tap flip to start</span>
+      <!-- History Card -->
+      <div class="glass-card history-card">
+        <div class="history-header">
+          <span class="stat-label">Recent History</span>
+          <span class="stat-label" id="winRateText">50% / 50%</span>
+        </div>
+        <div class="history-chips" id="historyChips">
+          <span style="font-size: 0.75rem; color: var(--text-muted);">No flips recorded</span>
         </div>
       </div>
 
-      <!-- Controls -->
-      <div class="controls-row">
-        <button class="flip-btn" onclick="flipCoin()">FLIP COIN</button>
-        <button class="icon-btn" onclick="resetStats()" title="Reset Stats">↺</button>
+      <!-- Button Controls -->
+      <div class="action-row">
+        <button class="btn-flip" id="flipBtn" onclick="flipCoin()">FLIP COIN</button>
+        <button class="btn-icon" onclick="resetStats()" title="Reset All Stats">↺</button>
       </div>
+
     </div>
+
   </div>
 
   <script>
+    // State Tracker
     let currentRotation = 0;
     let isFlipping = false;
     let total = 0, james = 0, keira = 0, streak = 0, lastWinner = null;
     let history = [];
 
-    // Web Audio Synthesizer for SFX
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Synthesized Audio Context
+    let audioCtx = null;
 
-    function playSound(type) {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type, isJames = false) {
+      initAudio();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
       gain.connect(audioCtx.destination);
 
       if (type === 'flip') {
-        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(750, audioCtx.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.15);
+        osc.stop(audioCtx.currentTime + 0.18);
       } else if (type === 'land') {
-        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.type = isJames ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(isJames ? 987.77 : 1318.51, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(isJames ? 493.88 : 659.25, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.3);
       }
     }
 
     function triggerHaptic() {
-      if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+      if (navigator.vibrate) {
+        navigator.vibrate([25, 40, 25]);
+      }
     }
 
     function flipCoin() {
       if (isFlipping) return;
       isFlipping = true;
+
+      initAudio();
       playSound('flip');
       triggerHaptic();
 
       const coin = document.getElementById('coin');
-      const isJames = Math.random() < 0.5;
-      const extraSpins = 1800; // 5 full rotations
-      const targetRotation = isJames ? 0 : 180;
+      const statusBanner = document.getElementById('statusBanner');
+      const flipBtn = document.getElementById('flipBtn');
 
-      currentRotation += extraSpins + (targetRotation - (currentRotation % 360));
+      flipBtn.style.opacity = '0.7';
+      statusBanner.innerText = "Flipping...";
+      statusBanner.style.color = "var(--text-muted)";
+
+      // Random winner selection
+      const isJames = Math.random() < 0.5;
+      const spins = 1800; // 5 full rotations
+      const targetSide = isJames ? 0 : 180;
+
+      currentRotation += spins + (targetSide - (currentRotation % 360));
       
-      coin.style.transition = 'transform 1.8s cubic-bezier(0.15, 0.85, 0.35, 1.2)';
+      coin.style.transition = 'transform 1.6s cubic-bezier(0.15, 0.85, 0.35, 1.15)';
       coin.style.transform = `rotateY(${currentRotation}deg)`;
 
       setTimeout(() => {
         isFlipping = false;
-        playSound('land');
+        flipBtn.style.opacity = '1';
+
+        playSound('land', isJames);
         triggerHaptic();
 
-        // Update stats
+        // Register Winner
+        const winnerName = isJames ? "James" : "Keira";
+        statusBanner.innerText = `It's ${winnerName}!`;
+        statusBanner.style.color = isJames ? "var(--james-gold)" : "var(--keira-pink)";
+
         total++;
         if (isJames) {
           james++;
@@ -410,45 +576,54 @@
           lastWinner = 'Keira';
         }
 
-        // Particle explosion
+        // Trigger Confetti
         if (window.confetti) {
           confetti({
-            particleCount: 40,
+            particleCount: 45,
             spread: 60,
-            origin: { y: 0.6 },
-            colors: isJames ? ['#f59e0b', '#fef08a'] : ['#ec4899', '#c084fc']
+            origin: { y: 0.55 },
+            colors: isJames ? ['#facc15', '#f59e0b', '#ffffff'] : ['#f472b6', '#c084fc', '#6366f1']
           });
         }
 
-        // Update UI
-        history.unshift(lastWinner);
+        history.unshift({ name: winnerName, isJames });
         if (history.length > 8) history.pop();
+
         updateUI();
-      }, 1800);
+      }, 1600);
     }
 
     function updateUI() {
       document.getElementById('totalFlips').innerText = total;
       document.getElementById('jamesCount').innerText = james;
       document.getElementById('keiraCount').innerText = keira;
-      document.getElementById('streakCount').innerText = streak;
+      document.getElementById('streakCount').innerText = streak > 0 ? `${streak}` : '0';
 
-      // Update Ratio Bar
-      const jamesPct = total > 0 ? (james / total) * 100 : 50;
-      document.getElementById('ratioJames').style.width = `${jamesPct}%`;
-      document.getElementById('ratioKeira').style.width = `${100 - jamesPct}%`;
+      const jamesPct = total > 0 ? Math.round((james / total) * 100) : 50;
+      const keiraPct = total > 0 ? Math.round((keira / total) * 100) : 50;
 
-      // Update History Log
-      const historyLog = document.getElementById('historyLog');
-      historyLog.innerHTML = history.map(w => 
-        `<span class="history-chip ${w === 'James' ? 'chip-james' : 'chip-keira'}">${w}</span>`
-      ).join('');
+      document.getElementById('barJames').style.width = `${jamesPct}%`;
+      document.getElementById('barKeira').style.width = `${keiraPct}%`;
+      document.getElementById('winRateText').innerText = `${jamesPct}% / ${keiraPct}%`;
+
+      const historyChips = document.getElementById('historyChips');
+      if (history.length === 0) {
+        historyChips.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-muted);">No flips recorded</span>';
+      } else {
+        historyChips.innerHTML = history.map(item => `
+          <span class="chip ${item.isJames ? 'chip-james' : 'chip-keira'}">
+            ${item.name}
+          </span>
+        `).join('');
+      }
     }
 
     function resetStats() {
       total = 0; james = 0; keira = 0; streak = 0; lastWinner = null; history = [];
+      const statusBanner = document.getElementById('statusBanner');
+      statusBanner.innerText = "Tap Coin or Button to Flip";
+      statusBanner.style.color = "var(--text-muted)";
       updateUI();
-      document.getElementById('historyLog').innerHTML = '<span style="font-size: 0.75rem; opacity: 0.5;">Tap flip to start</span>';
     }
   </script>
 </body>
