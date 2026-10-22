@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Coin Flipper - James vs Keira</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     :root {
       --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
@@ -24,31 +25,37 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
       background: var(--bg-gradient);
       color: var(--text-light);
       min-height: 100vh;
       min-height: -webkit-fill-available;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow-x: hidden;
     }
 
-    /* Main Container - Single Screen Default */
+    /* Layout - Default Single Screen */
     .app-container {
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto auto 1fr;
       height: 100vh;
       padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
       gap: 16px;
+      overflow-y: auto;
     }
 
-    /* iPhone Duo Dual-Screen / Spanning Support */
+    /* iPhone Duo Spanning & Foldable Posture Support */
     @media (screen-spanning: single-fold-vertical), (min-width: 700px) and (orientation: landscape) {
       .app-container {
-        grid-template-rows: 1fr;
+        grid-template-rows: auto 1fr;
         grid-template-columns: 1fr 1fr;
-        gap: 32px;
+        gap: 24px;
+        overflow: hidden;
+      }
+
+      .header-area {
+        grid-column: span 2;
       }
 
       .stage-panel {
@@ -57,30 +64,19 @@
       }
     }
 
-    @media (screen-spanning: single-fold-horizontal) {
-      .app-container {
-        grid-template-rows: 1fr 1fr;
-        grid-template-columns: 1fr;
-        gap: 32px;
-      }
-    }
-
-    /* Header */
     header {
       text-align: center;
-      padding: 8px 0;
     }
 
     h1 {
       font-size: 1.5rem;
       font-weight: 700;
-      letter-spacing: -0.5px;
       background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    /* Stage Panel (Coin Display) */
+    /* Stage Panel */
     .stage-panel {
       display: flex;
       flex-direction: column;
@@ -88,15 +84,15 @@
       justify-content: center;
       position: relative;
       perspective: 1000px;
+      gap: 20px;
     }
 
     /* 3D Coin */
     .coin-wrapper {
-      width: 220px;
-      height: 220px;
+      width: 200px;
+      height: 200px;
       position: relative;
       transform-style: preserve-3d;
-      transition: transform 0.1s ease-out;
       cursor: pointer;
     }
 
@@ -123,13 +119,11 @@
       border: 6px solid rgba(255,255,255,0.4);
     }
 
-    /* James Side */
     .face-james {
       background: radial-gradient(circle at 30% 30%, #fef08a, #d97706);
       color: #78350f;
     }
 
-    /* Keira Side */
     .face-keira {
       background: radial-gradient(circle at 30% 30%, #fbcfe8, #c084fc);
       color: #581c87;
@@ -137,26 +131,24 @@
     }
 
     .coin-title {
-      font-size: 2rem;
+      font-size: 1.8rem;
       font-weight: 800;
-      margin-top: 8px;
+      margin-top: 6px;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
 
     .icon-svg {
-      width: 70px;
-      height: 70px;
+      width: 65px;
+      height: 65px;
       filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
     }
 
-    /* Dashboard & Stats Panel */
+    /* Controls & Dashboard */
     .dashboard-panel {
       display: flex;
       flex-direction: column;
+      gap: 12px;
       justify-content: center;
-      gap: 16px;
     }
 
     .glass-card {
@@ -164,69 +156,136 @@
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      padding: 16px;
+      border-radius: 18px;
+      padding: 14px;
     }
 
     .stats-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
       text-align: center;
     }
 
     .stat-val {
-      font-size: 1.8rem;
+      font-size: 1.3rem;
       font-weight: 700;
     }
 
     .stat-label {
-      font-size: 0.75rem;
+      font-size: 0.65rem;
       text-transform: uppercase;
       opacity: 0.7;
       margin-top: 2px;
     }
 
-    /* Action Button */
+    /* Win Percentage Bar */
+    .ratio-bar-container {
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      margin-top: 8px;
+    }
+
+    .ratio-james {
+      background: var(--james-yellow);
+      width: 50%;
+      transition: width 0.3s ease;
+    }
+
+    .ratio-keira {
+      background: var(--keira-pink);
+      width: 50%;
+      transition: width 0.3s ease;
+    }
+
+    /* History Chips */
+    .history-container {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .history-chip {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chip-james {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--james-yellow);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .chip-keira {
+      background: rgba(236, 72, 153, 0.2);
+      color: var(--keira-pink);
+      border: 1px solid rgba(236, 72, 153, 0.4);
+    }
+
+    /* Action Buttons */
+    .controls-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
     .flip-btn {
-      width: 100%;
-      padding: 18px;
+      padding: 16px;
       border-radius: 16px;
       border: none;
       background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
       color: #fff;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 700;
-      letter-spacing: 0.5px;
-      box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5);
+      box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
       cursor: pointer;
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
     }
 
     .flip-btn:active {
-      transform: scale(0.97);
+      transform: scale(0.98);
+    }
+
+    .icon-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
 
   <div class="app-container">
-    <!-- Panel 1: Stage & Coin (Left screen in Duo Book Mode) -->
-    <div class="stage-panel">
+    <div class="header-area">
       <header>
         <h1>James vs Keira</h1>
       </header>
+    </div>
 
-      <div class="coin-wrapper" id="coinWrapper" onclick="flipCoin()">
+    <!-- Stage Panel -->
+    <div class="stage-panel">
+      <div class="coin-wrapper" onclick="flipCoin()">
         <div class="coin" id="coin">
-          <!-- James Side -->
           <div class="coin-face face-james">
             <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
             </svg>
             <div class="coin-title">James</div>
           </div>
-          <!-- Keira Side -->
           <div class="coin-face face-keira">
             <svg class="icon-svg" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 12c0-3.87-3.13-7-7-7s-7 3.13-7 7c0 2.38 1.19 4.47 3 5.74V21l4-2 4 2v-3.26c1.81-1.27 3-3.36 3-5.74z"/>
@@ -237,63 +296,159 @@
       </div>
     </div>
 
-    <!-- Panel 2: Controls & Stats (Right screen in Duo Book Mode) -->
+    <!-- Dashboard Panel -->
     <div class="dashboard-panel">
-      <div class="glass-card stats-grid">
-        <div>
-          <div class="stat-val" id="jamesCount" style="color: var(--james-yellow);">0</div>
-          <div class="stat-label">James</div>
+      <!-- Stats Summary -->
+      <div class="glass-card">
+        <div class="stats-grid">
+          <div>
+            <div class="stat-val" id="totalFlips">0</div>
+            <div class="stat-label">Total</div>
+          </div>
+          <div>
+            <div class="stat-val" id="jamesCount" style="color: var(--james-yellow);">0</div>
+            <div class="stat-label">James</div>
+          </div>
+          <div>
+            <div class="stat-val" id="keiraCount" style="color: var(--keira-pink);">0</div>
+            <div class="stat-label">Keira</div>
+          </div>
+          <div>
+            <div class="stat-val" id="streakCount">0</div>
+            <div class="stat-label">Streak</div>
+          </div>
         </div>
-        <div>
-          <div class="stat-val" id="keiraCount" style="color: var(--keira-pink);">0</div>
-          <div class="stat-label">Keira</div>
+
+        <div class="ratio-bar-container">
+          <div class="ratio-james" id="ratioJames"></div>
+          <div class="ratio-keira" id="ratioKeira"></div>
         </div>
       </div>
 
-      <button class="flip-btn" onclick="flipCoin()">FLIP COIN</button>
+      <!-- History Log -->
+      <div class="glass-card">
+        <div class="stat-label" style="margin-bottom: 6px;">Recent Flips</div>
+        <div class="history-container" id="historyLog">
+          <span style="font-size: 0.75rem; opacity: 0.5;">Tap flip to start</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-row">
+        <button class="flip-btn" onclick="flipCoin()">FLIP COIN</button>
+        <button class="icon-btn" onclick="resetStats()" title="Reset Stats">↺</button>
+      </div>
     </div>
   </div>
 
   <script>
     let currentRotation = 0;
     let isFlipping = false;
-    let jamesWins = 0;
-    let keiraWins = 0;
+    let total = 0, james = 0, keira = 0, streak = 0, lastWinner = null;
+    let history = [];
+
+    // Web Audio Synthesizer for SFX
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'flip') {
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      } else if (type === 'land') {
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      }
+    }
 
     function triggerHaptic() {
-      if (navigator.vibrate) {
-        navigator.vibrate([30, 50, 30]);
-      }
+      if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
     }
 
     function flipCoin() {
       if (isFlipping) return;
       isFlipping = true;
+      playSound('flip');
       triggerHaptic();
 
       const coin = document.getElementById('coin');
       const isJames = Math.random() < 0.5;
-      
-      // Calculate 3D rotations (minimum 5 full spins = 1800 deg)
-      const extraSpins = 1800;
+      const extraSpins = 1800; // 5 full rotations
       const targetRotation = isJames ? 0 : 180;
-      
+
       currentRotation += extraSpins + (targetRotation - (currentRotation % 360));
       
-      coin.style.transition = 'transform 2s cubic-bezier(0.15, 0.85, 0.35, 1.2)';
+      coin.style.transition = 'transform 1.8s cubic-bezier(0.15, 0.85, 0.35, 1.2)';
       coin.style.transform = `rotateY(${currentRotation}deg)`;
 
       setTimeout(() => {
         isFlipping = false;
-        if (isJames) {
-          jamesWins++;
-          document.getElementById('jamesCount').innerText = jamesWins;
-        } else {
-          keiraWins++;
-          document.getElementById('keiraCount').innerText = keiraWins;
-        }
+        playSound('land');
         triggerHaptic();
-      }, 2000);
+
+        // Update stats
+        total++;
+        if (isJames) {
+          james++;
+          streak = (lastWinner === 'James') ? streak + 1 : 1;
+          lastWinner = 'James';
+        } else {
+          keira++;
+          streak = (lastWinner === 'Keira') ? streak + 1 : 1;
+          lastWinner = 'Keira';
+        }
+
+        // Particle explosion
+        if (window.confetti) {
+          confetti({
+            particleCount: 40,
+            spread: 60,
+            origin: { y: 0.6 },
+            colors: isJames ? ['#f59e0b', '#fef08a'] : ['#ec4899', '#c084fc']
+          });
+        }
+
+        // Update UI
+        history.unshift(lastWinner);
+        if (history.length > 8) history.pop();
+        updateUI();
+      }, 1800);
+    }
+
+    function updateUI() {
+      document.getElementById('totalFlips').innerText = total;
+      document.getElementById('jamesCount').innerText = james;
+      document.getElementById('keiraCount').innerText = keira;
+      document.getElementById('streakCount').innerText = streak;
+
+      // Update Ratio Bar
+      const jamesPct = total > 0 ? (james / total) * 100 : 50;
+      document.getElementById('ratioJames').style.width = `${jamesPct}%`;
+      document.getElementById('ratioKeira').style.width = `${100 - jamesPct}%`;
+
+      // Update History Log
+      const historyLog = document.getElementById('historyLog');
+      historyLog.innerHTML = history.map(w => 
+        `<span class="history-chip ${w === 'James' ? 'chip-james' : 'chip-keira'}">${w}</span>`
+      ).join('');
+    }
+
+    function resetStats() {
+      total = 0; james = 0; keira = 0; streak = 0; lastWinner = null; history = [];
+      updateUI();
+      document.getElementById('historyLog').innerHTML = '<span style="font-size: 0.75rem; opacity: 0.5;">Tap flip to start</span>';
     }
   </script>
 </body>
